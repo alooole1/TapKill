@@ -5,7 +5,7 @@ plugins {
 android {
     namespace 'com.tapkill'
     compileSdk 34
-    buildToolsVersion "30.0.3"
+    buildToolsVersion "34.0.0"
 
     defaultConfig {
         applicationId 'com.tapkill'
@@ -25,10 +25,5 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
-    }
-
-    // تعطيل AAPT2 والاعتماد على AAPT القديم
-    aaptOptions {
-        useAapt2 = false
     }
 }
