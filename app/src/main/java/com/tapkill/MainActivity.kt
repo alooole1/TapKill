@@ -12,7 +12,6 @@ class MainActivity : AppCompatActivity() {
     
     companion object {
         private const val OVERLAY_PERMISSION_REQUEST = 100
-        private const val ACCESSIBILITY_PERMISSION_REQUEST = 101
     }
     
     private lateinit var btnStartService: Button
@@ -31,7 +30,6 @@ class MainActivity : AppCompatActivity() {
         // 1. التحقق من صلاحية الرسم فوق التطبيقات
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (!Settings.canDrawOverlays(this)) {
-                // طلب الإذن
                 val intent = Intent(
                     Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                     android.net.Uri.parse("package:$packageName")
@@ -41,19 +39,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
         
-        // 2. بدء الخدمة
-        startFloatingButtonService()
-    }
-    
-    private fun startFloatingButtonService() {
-        val intent = Intent(this, FloatingButtonService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
-        }
-        Toast.makeText(this, "✅ تم تفعيل الزر العائم", Toast.LENGTH_SHORT).show()
-        finish()
+        // 2. فتح إعدادات الإمكانية لتفعيل الخدمة
+        Toast.makeText(this, "⚠️ افتح إعدادات الإمكانية وفعّل TapKill", Toast.LENGTH_LONG).show()
+        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+        startActivity(intent)
     }
     
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -63,7 +52,9 @@ class MainActivity : AppCompatActivity() {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     if (Settings.canDrawOverlays(this)) {
                         Toast.makeText(this, "✅ تم منح الإذن", Toast.LENGTH_SHORT).show()
-                        startFloatingButtonService()
+                        // فتح إعدادات الإمكانية
+                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                        startActivity(intent)
                     } else {
                         Toast.makeText(this, "❌ يجب منح إذن الرسم فوق التطبيقات", Toast.LENGTH_LONG).show()
                     }
