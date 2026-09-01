@@ -16,6 +16,7 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import kotlin.math.abs
 
 class FloatingButtonService : Service() {
     
@@ -59,11 +60,10 @@ class FloatingButtonService : Service() {
         val btnKill = floatingView.findViewById<Button>(R.id.btnKill)
         if (isAccessibilityEnabled) {
             btnKill.text = "🔫"
-            btnKill.background = null
-            btnKill.setBackgroundColor(0xFFFF0000.toInt()) // أحمر
+            btnKill.setBackgroundColor(0xFFFF0000.toInt())
         } else {
             btnKill.text = "⚡"
-            btnKill.setBackgroundColor(0xFF00FF00.toInt()) // أخضر
+            btnKill.setBackgroundColor(0xFF00FF00.toInt())
         }
     }
     
@@ -91,7 +91,6 @@ class FloatingButtonService : Service() {
         val btnKill = floatingView.findViewById<Button>(R.id.btnKill)
         btnKill.setOnClickListener {
             if (!isAccessibilityEnabled) {
-                // افتح إعدادات الإمكانية
                 val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 startActivity(intent)
@@ -101,7 +100,6 @@ class FloatingButtonService : Service() {
             }
         }
         
-        // جعل الزر قابل للسحب
         floatingView.setOnTouchListener(FloatingOnTouchListener(params, windowManager))
     }
     
@@ -162,7 +160,6 @@ class FloatingOnTouchListener(
                 return true
             }
             android.view.MotionEvent.ACTION_UP -> {
-                // إذا لم يكن سحباً، اعتبره نقراً
                 if (!isDragging) {
                     v.performClick()
                 }
