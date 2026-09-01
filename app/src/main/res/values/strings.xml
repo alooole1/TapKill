@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">TapKill</string>
+    <string name="accessibility_desc">خدمة TapKill لإغلاق التطبيقات</string>
 </resources>
