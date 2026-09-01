@@ -8,6 +8,7 @@ import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
+import android.provider.Settings
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -20,11 +21,11 @@ class FloatingButtonService : Service() {
     
     private lateinit var windowManager: WindowManager
     private lateinit var floatingView: View
-    private var isAccessibilityEnabled = false
     
     companion object {
         private const val CHANNEL_ID = "TapKillChannel"
         private const val NOTIFICATION_ID = 1
+        private var isAccessibilityEnabled = false
     }
     
     override fun onCreate() {
@@ -38,6 +39,32 @@ class FloatingButtonService : Service() {
         
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         inflateFloatingView()
+        checkAccessibilityStatus()
+    }
+    
+    private fun checkAccessibilityStatus() {
+        try {
+            val enabledServices = Settings.Secure.getString(
+                contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            )
+            isAccessibilityEnabled = enabledServices?.contains("com.tapkill") == true
+            updateButtonState()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+    
+    private fun updateButtonState() {
+        val btnKill = floatingView.findViewById<Button>(R.id.btnKill)
+        if (isAccessibilityEnabled) {
+            btnKill.text = "🔫"
+            btnKill.background = null
+            btnKill.setBackgroundColor(0xFFFF0000.toInt()) // أحمر
+        } else {
+            btnKill.text = "⚡"
+            btnKill.setBackgroundColor(0xFF00FF00.toInt()) // أخضر
+        }
     }
     
     private fun inflateFloatingView() {
@@ -63,7 +90,15 @@ class FloatingButtonService : Service() {
         
         val btnKill = floatingView.findViewById<Button>(R.id.btnKill)
         btnKill.setOnClickListener {
-            Toast.makeText(this, "🔫 سيتم إغلاق التطبيق الحالي", Toast.LENGTH_SHORT).show()
+            if (!isAccessibilityEnabled) {
+                // افتح إعدادات الإمكانية
+                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                startActivity(intent)
+                Toast.makeText(this, "⚠️ فعّل خدمة TapKill في الإعدادات", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(this, "✅ الزر جاهز لإغلاق الإعلانات", Toast.LENGTH_SHORT).show()
+            }
         }
         
         // جعل الزر قابل للسحب
@@ -101,6 +136,7 @@ class FloatingOnTouchListener(
     private var initialY = 0
     private var initialTouchX = 0f
     private var initialTouchY = 0f
+    private var isDragging = false
     
     override fun onTouch(v: View, event: android.view.MotionEvent): Boolean {
         when (event.action) {
@@ -109,12 +145,27 @@ class FloatingOnTouchListener(
                 initialY = params.y
                 initialTouchX = event.rawX
                 initialTouchY = event.rawY
+                isDragging = false
                 return true
             }
             android.view.MotionEvent.ACTION_MOVE -> {
-                params.x = initialX + (event.rawX - initialTouchX).toInt()
-                params.y = initialY + (event.rawY - initialTouchY).toInt()
-                windowManager.updateViewLayout(v, params)
+                val deltaX = abs(event.rawX - initialTouchX)
+                val deltaY = abs(event.rawY - initialTouchY)
+                if (deltaX > 10 || deltaY > 10) {
+                    isDragging = true
+                }
+                if (isDragging) {
+                    params.x = initialX + (event.rawX - initialTouchX).toInt()
+                    params.y = initialY + (event.rawY - initialTouchY).toInt()
+                    windowManager.updateViewLayout(v, params)
+                }
+                return true
+            }
+            android.view.MotionEvent.ACTION_UP -> {
+                // إذا لم يكن سحباً، اعتبره نقراً
+                if (!isDragging) {
+                    v.performClick()
+                }
                 return true
             }
         }
