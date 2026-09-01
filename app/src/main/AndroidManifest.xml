@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.tapkill">
 
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -9,7 +10,8 @@
         android:allowBackup="true"
         android:icon="@android:drawable/ic_dialog_info"
         android:label="TapKill"
-        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+        android:theme="@style/Theme.AppCompat.NoActionBar"
+        tools:targetApi="31">
         
         <service
             android:name=".FloatingButtonService"
@@ -37,4 +39,5 @@
             </intent-filter>
         </activity>
     </application>
+
 </manifest>
