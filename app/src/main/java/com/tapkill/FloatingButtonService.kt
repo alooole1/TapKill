@@ -1,6 +1,9 @@
 package com.tapkill
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
@@ -9,36 +12,38 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
-import android.widget.ImageButton
+import android.widget.Button
 import android.widget.Toast
+import androidx.core.app.NotificationCompat
 
 class FloatingButtonService : Service() {
+    
     private lateinit var windowManager: WindowManager
-    private lateinit var floatingButton: View
-
-    override fun onBind(intent: Intent?): IBinder? = null
-
+    private lateinit var floatingView: View
+    private var isAccessibilityEnabled = false
+    
+    companion object {
+        private const val CHANNEL_ID = "TapKillChannel"
+        private const val NOTIFICATION_ID = 1
+    }
+    
     override fun onCreate() {
         super.onCreate()
-        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-
-        // تضخيم زر عائم من layout (سننشئه لاحقاً)
-        floatingButton = LayoutInflater.from(this).inflate(R.layout.floating_button, null)
-        val button = floatingButton.findViewById<ImageButton>(R.id.btnKill)
-
-        button.setOnClickListener {
-            // عند الضغط، سنقوم بتشغيل خدمة Accessibility لتنفيذ النقر على زر الإغلاق
-            try {
-                val intent = Intent(this, TapKillAccessibilityService::class.java)
-                intent.putExtra("ACTION", "KILL_AD")
-                startService(intent)
-                Toast.makeText(this, "جاري تجاوز الإعلان...", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(this, "خطأ: تأكد من تفعيل خدمة الإمكانية", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        // إعدادات النافذة العائمة
+        createNotificationChannel()
+        startForeground(NOTIFICATION_ID, NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("TapKill")
+            .setContentText("الزر العائم نشط")
+            .setSmallIcon(android.R.drawable.ic_menu_edit)
+            .build())
+        
+        windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        inflateFloatingView()
+    }
+    
+    private fun inflateFloatingView() {
+        val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        floatingView = inflater.inflate(R.layout.floating_button, null)
+        
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -49,17 +54,70 @@ class FloatingButtonService : Service() {
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         )
+        
         params.gravity = Gravity.TOP or Gravity.START
         params.x = 100
         params.y = 200
-
-        windowManager.addView(floatingButton, params)
+        
+        windowManager.addView(floatingView, params)
+        
+        val btnKill = floatingView.findViewById<Button>(R.id.btnKill)
+        btnKill.setOnClickListener {
+            Toast.makeText(this, "🔫 سيتم إغلاق التطبيق الحالي", Toast.LENGTH_SHORT).show()
+        }
+        
+        // جعل الزر قابل للسحب
+        floatingView.setOnTouchListener(FloatingOnTouchListener(params, windowManager))
     }
-
+    
     override fun onDestroy() {
         super.onDestroy()
-        if (::floatingButton.isInitialized) {
-            windowManager.removeView(floatingButton)
+        if (::floatingView.isInitialized) {
+            windowManager.removeView(floatingView)
         }
+    }
+    
+    override fun onBind(intent: Intent?): IBinder? = null
+    
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "TapKill Service",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
+        }
+    }
+}
+
+class FloatingOnTouchListener(
+    private val params: WindowManager.LayoutParams,
+    private val windowManager: WindowManager
+) : View.OnTouchListener {
+    
+    private var initialX = 0
+    private var initialY = 0
+    private var initialTouchX = 0f
+    private var initialTouchY = 0f
+    
+    override fun onTouch(v: View, event: android.view.MotionEvent): Boolean {
+        when (event.action) {
+            android.view.MotionEvent.ACTION_DOWN -> {
+                initialX = params.x
+                initialY = params.y
+                initialTouchX = event.rawX
+                initialTouchY = event.rawY
+                return true
+            }
+            android.view.MotionEvent.ACTION_MOVE -> {
+                params.x = initialX + (event.rawX - initialTouchX).toInt()
+                params.y = initialY + (event.rawY - initialTouchY).toInt()
+                windowManager.updateViewLayout(v, params)
+                return true
+            }
+        }
+        return false
     }
 }
