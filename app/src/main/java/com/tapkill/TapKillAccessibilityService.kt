@@ -10,7 +10,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
-import kotlin.math.abs
+import android.view.accessibility.AccessibilityNodeInfo
 
 class TapKillAccessibilityService : AccessibilityService() {
     
@@ -88,68 +88,82 @@ class TapKillAccessibilityService : AccessibilityService() {
         
         val closeTexts = listOf(
             "إغلاق", "إلغاء", "تخطي", "Skip", "Close", "X", "✕", 
-            "×", "تجاهل", "Dismiss", "Cancel", "لا شكراً", "Not now"
+            "×", "تجاهل", "Dismiss", "Cancel", "لا شكراً", "Not now",
+            "اغلاق", "تجاهل", "رجوع", "Back"
         )
         
-        findAndClickCloseButton(root, closeTexts)
+        // محاولة العثور على زر الإغلاق
+        val found = findAndClickCloseButton(root, closeTexts)
         
-        handler.postDelayed({
-            if (isProcessing) {
-                clickTopRightCorner()
-            }
-        }, 300)
+        if (!found) {
+            // إذا لم يتم العثور على زر، جرب النقر في الزوايا
+            handler.postDelayed({
+                if (isProcessing) {
+                    tryCloseCorners()
+                }
+            }, 300)
+        } else {
+            isProcessing = false
+        }
     }
     
-    private fun findAndClickCloseButton(node: android.view.accessibility.AccessibilityNodeInfo, closeTexts: List<String>) {
+    private fun findAndClickCloseButton(node: AccessibilityNodeInfo, closeTexts: List<String>): Boolean {
         try {
+            // البحث في العقدة الحالية
+            val text = node.text?.toString() ?: ""
+            val contentDesc = node.contentDescription?.toString() ?: ""
+            
+            if (closeTexts.any { 
+                text.contains(it, ignoreCase = true) || 
+                contentDesc.contains(it, ignoreCase = true) 
+            }) {
+                node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                Log.d(TAG, "✅ تم إغلاق الإعلان بنجاح")
+                return true
+            }
+            
+            // البحث في الأطفال
             for (i in 0 until node.childCount) {
                 val child = node.getChild(i) ?: continue
-                
-                val text = child.text?.toString() ?: ""
-                val contentDesc = child.contentDescription?.toString() ?: ""
-                
-                if (closeTexts.any { 
-                    text.contains(it, ignoreCase = true) || 
-                    contentDesc.contains(it, ignoreCase = true) 
-                }) {
-                    child.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
-                    isProcessing = false
-                    Log.d(TAG, "✅ تم إغلاق الإعلان بنجاح")
-                    return
+                if (findAndClickCloseButton(child, closeTexts)) {
+                    return true
                 }
-                
-                findAndClickCloseButton(child, closeTexts)
             }
         } catch (e: Exception) {
             Log.e(TAG, "خطأ في البحث عن زر الإغلاق", e)
         }
+        return false
     }
     
-    private fun clickTopRightCorner() {
+    private fun tryCloseCorners() {
         try {
             val root = rootInActiveWindow ?: return
             val rect = Rect()
             root.getBoundsInScreen(rect)
             
-            val x = (rect.right - 50).toFloat()
-            val y = (rect.top + 50).toFloat()
+            // جرب النقر في الزوايا المختلفة
+            val corners = listOf(
+                Pair(rect.right - 50, rect.top + 50),   // أعلى يمين
+                Pair(rect.left + 50, rect.top + 50),    // أعلى يسار
+                Pair(rect.right - 50, rect.bottom - 50), // أسفل يمين
+                Pair(rect.left + 50, rect.bottom - 50)   // أسفل يسار
+            )
             
-            performGesture(createClickGesture(x, y))
+            for ((x, y) in corners) {
+                try {
+                    performGlobalAction(GLOBAL_ACTION_BACK)
+                    Log.d(TAG, "👆 تم محاولة إغلاق الإعلان")
+                    break
+                } catch (e: Exception) {
+                    continue
+                }
+            }
+            
             isProcessing = false
-            Log.d(TAG, "👆 تم النقر في الزاوية العلوية اليمنى")
         } catch (e: Exception) {
-            Log.e(TAG, "خطأ في النقر على الزاوية", e)
+            Log.e(TAG, "خطأ في محاولة إغلاق الإعلان", e)
             isProcessing = false
         }
-    }
-    
-    private fun createClickGesture(x: Float, y: Float): GestureDescription {
-        val path = Path()
-        path.moveTo(x, y)
-        
-        val builder = GestureDescription.Builder()
-        builder.addStroke(GestureDescription.StrokeDescription(path, 0, 1))
-        return builder.build()
     }
     
     override fun onInterrupt() {
