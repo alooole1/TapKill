@@ -1,23 +1,18 @@
 package com.tapkill
 
 import android.os.Bundle
-import android.util.Log
+import android.widget.Button
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
-    companion object {
-        private const val TAG = "TapKill"
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d(TAG, "onCreate: بدء التشغيل")
+        setContentView(R.layout.activity_main)
         
-        try {
-            setContentView(R.layout.activity_main)
-            Log.d(TAG, "onCreate: setContentView تم بنجاح")
-        } catch (e: Exception) {
-            Log.e(TAG, "onCreate: فشل setContentView", e)
+        val btnStart = findViewById<Button>(R.id.btnStartService)
+        btnStart.setOnClickListener {
+            Toast.makeText(this, "سيتم تفعيل الزر العائم", Toast.LENGTH_SHORT).show()
         }
     }
 }

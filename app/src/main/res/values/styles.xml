@@ -1,7 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.AppCompat.NoActionBar" parent="android:Theme.DeviceDefault">
-        <item name="android:windowActionBar">false</item>
-        <item name="android:windowNoTitle">true</item>
+    <style name="Theme.AppCompat.Light.NoActionBar" parent="Theme.AppCompat.Light">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
     </style>
 </resources>
